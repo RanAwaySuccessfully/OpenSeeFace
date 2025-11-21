@@ -13,7 +13,7 @@ class VideoReader():
     def __init__(self, capture, camera=False):
         if os.name == 'nt' and camera:
             self.cap = cv2.VideoCapture(capture, cv2.CAP_DSHOW)
-        else:
+        elif self.cap is None:
             self.cap = cv2.VideoCapture(capture)
         if self.cap is None:
             print("The video source cannot be opened")
@@ -120,6 +120,23 @@ class OpenCVReader(VideoReader):
         return super(OpenCVReader, self).read()
     def close(self):
         super(OpenCVReader, self).close()
+
+class V4L2Reader(OpenCVReader):
+    def __init__(self, capture, width, height, fps, dformat):
+        self.cap = cv2.VideoCapture(capture, cv2.CAP_V4L2)
+        if dformat:
+            fourcc = cv2.VideoWriter_fourcc(*dformat)
+            self.cap.set(6, fourcc)
+        super(V4L2Reader, self).__init__(capture, width, height, fps)
+        self.cap.set(5, fps)
+    def is_open(self):
+        return super(V4L2Reader, self).is_open()
+    def is_ready(self):
+        return super(V4L2Reader, self).is_ready()
+    def read(self):
+        return super(V4L2Reader, self).read()
+    def close(self):
+        super(V4L2Reader, self).close()
 
 class RawReader:
     def __init__(self, width, height):
@@ -232,6 +249,14 @@ class InputReader():
                     print(f"Escapi failed. Falling back to OpenCV. If this fails, please change your camera settings.", file=sys.stderr)
                     self.reader = OpenCVReader(int(capture), width, height, fps)
                     self.name = self.reader.name
+                elif sys.platform == 'linux':
+                    try:
+                        self.reader = V4L2Reader(int(capture), width, height, fps, dcap)
+                    except:
+                        print("V4L2 exception: ")
+                        traceback.print_exc()
+                        print(f"V4L2 failed. Falling back to OpenCV. If this fails, please change your camera settings.", file=sys.stderr)
+                        self.reader = OpenCVReader(int(capture), width, height, fps)
                 else:
                     self.reader = OpenCVReader(int(capture), width, height, fps)
         except Exception as e:
