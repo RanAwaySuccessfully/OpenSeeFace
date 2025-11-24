@@ -13,7 +13,7 @@ class VideoReader():
     def __init__(self, capture, camera=False):
         if os.name == 'nt' and camera:
             self.cap = cv2.VideoCapture(capture, cv2.CAP_DSHOW)
-        elif self.cap is None:
+        else:
             self.cap = cv2.VideoCapture(capture)
         if self.cap is None:
             print("The video source cannot be opened")
@@ -125,9 +125,16 @@ class V4L2Reader(OpenCVReader):
     def __init__(self, capture, width, height, fps, dformat):
         self.cap = cv2.VideoCapture(capture, cv2.CAP_V4L2)
         if dformat:
-            fourcc = cv2.VideoWriter_fourcc(*dformat)
+            fourcc = cv2.VideoWriter.fourcc(*dformat)
             self.cap.set(6, fourcc)
-        super(V4L2Reader, self).__init__(capture, width, height, fps)
+        self.device = None
+        self.width = width
+        self.height = height
+        self.fps = fps
+        self.name = str(capture)
+        self.cap.set(3, width)
+        self.cap.set(4, height)
+        self.cap.set(38, 1)
         self.cap.set(5, fps)
     def is_open(self):
         return super(V4L2Reader, self).is_open()
